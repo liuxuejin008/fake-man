@@ -1,7 +1,7 @@
 import os
 import json
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,6 +14,11 @@ app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 
 BANANA_API_KEY = os.environ.get("BANANA_API_KEY")
 BANANA_API_URL = os.environ.get("BANANA_API_URL", "https://api.acedata.cloud/nano-banana/images")
+
+# 静态文件路由 - Vercel 需要
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(STATIC_DIR, filename)
 
 @app.route('/')
 def home():
