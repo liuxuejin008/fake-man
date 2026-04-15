@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 人工智能伪人生成器 - SYNTH | 虚拟身份生成</title>
+    <meta name="description" content="使用最新AI技术生成逼真的虚拟人物形象，支持多种风格和自定义描述">
+    <meta name="keywords" content="AI生成, 虚拟人物, 伪人生成, AI绘图, 赛博朋克">
+
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- 添加favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+</head>
+<body>
+    <!-- 背景流光效果 -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <!-- 装饰底纹 -->
+    <div class="grid-overlay"></div>
+
+    <!-- 粒子效果容器 -->
+    <div class="particles" id="particles"></div>
+
+    <div class="container glass-panel">
+        <!-- 顶部导航 -->
+        <nav class="top-nav">
+            <div class="logo">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">SYNTH</span>
+            </div>
+            <div class="nav-actions">
+                <button class="icon-btn" id="historyBtn" title="历史记录">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="themeBtn" title="切换主题">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
+        <header>
+            <h1 class="glow-text">虚拟身份生成器</h1>
+            <p class="subtitle">使用 AI 技术创建独一无二的虚拟形象</p>
+        </header>
+
+        <main>
+            <!-- 风格选择器 -->
+            <div class="style-selector">
+                <div class="style-tabs" id="styleTabs">
+                    <button class="style-tab active" data-style="cyberpunk">赛博朋克</button>
+                    <button class="style-tab" data-style="anime">动漫风格</button>
+                    <button class="style-tab" data-style="realistic">写实风格</button>
+                    <button class="style-tab" data-style="fantasy">奇幻风格</button>
+                </div>
+            </div>
+
+            <!-- 图像展示区 -->
+            <div class="image-showcase" id="imageContainer">
+                <div class="placeholder-content" id="placeholder">
+                    <div class="placeholder-icon">✨</div>
+                    <span>等待生成...</span>
+                    <p class="placeholder-hint">选择风格并点击生成按钮开始</p>
+                </div>
+                <img id="generatedImage" src="" alt="Generated Human" class="hidden">
+
+                <!-- 生成成功后的操作按钮 -->
+                <div class="image-actions hidden" id="imageActions">
+                    <button class="action-btn" id="downloadBtn" title="下载图片">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        下载
+                    </button>
+                    <button class="action-btn" id="regenerateBtn" title="重新生成">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                        重新生成
+                    </button>
+                    <button class="action-btn" id="shareBtn" title="分享">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                        分享
+                    </button>
+                </div>
+
+                <div class="loader hidden" id="loader">
+                    <div class="spinner"></div>
+                    <p class="loading-text">正在生成中...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="controls">
+                <div class="input-group">
+                    <label for="promptInput">
+                        <span class="label-icon">✎</span>
+                        自定义描述
+                    </label>
+                    <textarea id="promptInput" placeholder="描述你心目中的虚拟形象，例如：银色短发、蓝色眼睛、未来感服装...（留空使用默认风格）"></textarea>
+                    <div class="input-hint">
+                        <span class="hint-text">💡 提示：描述越详细，生成效果越好</span>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="btnRandom" class="btn btn-secondary">
+                        <span class="btn-icon">🎲</span>
+                        <span class="btn-text">随机灵感</span>
+                    </button>
+                    <button id="btnGenerate" class="btn btn-primary">
+                        <span class="btn-icon">✨</span>
+                        <span class="btn-text">立即生成</span>
+                    </button>
+                </div>
+
+                <div id="errorMessage" class="error-msg hidden"></div>
+                <div id="successMessage" class="success-msg hidden"></div>
+            </div>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="footer">
+            <p>Powered by AI · 虚拟形象生成技术</p>
+        </footer>
+    </div>
+
+    <!-- 历史记录侧边栏 -->
+    <div class="sidebar hidden" id="historySidebar">
+        <div class="sidebar-header">
+            <h3>生成历史</h3>
+            <button class="close-btn" id="closeHistory">×</button>
+        </div>
+        <div class="history-list" id="historyList">
+            <div class="empty-state">暂无历史记录</div>
+        </div>
+        <div class="sidebar-footer">
+            <button class="btn-clear" id="clearHistory">清空历史</button>
+        </div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay hidden" id="overlay"></div>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>
