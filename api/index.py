@@ -40,42 +40,36 @@ def generate():
             url=BANANA_API_URL,
             headers={
                 "Authorization": f"Bearer {BANANA_API_KEY}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Accept": "application/json"
             },
             json={
+                "action": "generate",
                 "prompt": enhanced_prompt,
-                "aspect_ratio": "9:16"  # typical portrait mode
+                "aspect_ratio": "9:16",
+                "model": "nano-banana-2"
             },
             timeout=60
         )
-        
+
         response.raise_for_status()
         resp_json = response.json()
-        
-        # Parse the Banana API response. Acedata typically returns { "success": true, "data": { "image_url": "..." } } or { "data": [{ "url": "..." }] }
-        image_url = ""
-        
-        if "data" in resp_json:
-            if isinstance(resp_json["data"], list) and len(resp_json["data"]) > 0:
-                # DALL-E style
-                image_url = resp_json["data"][0].get("url", "")
-            elif isinstance(resp_json["data"], dict):
-                # Another common style
-                image_url = resp_json["data"].get("image_url", "")
-            else:
-                image_url = str(resp_json["data"])
-        elif "url" in resp_json:
-            image_url = resp_json["url"]
-        elif "response" in resp_json: # Midjourney style maybe
-            image_url = resp_json["response"]
-        
-        # If we didn't find the url properly, just send back the whole raw json for debugging on frontend or assume it failed
-        if not image_url:
-             # Let's stringify the JSON payload and send it to front-end for debug
-             return jsonify({
-                "error": "Could not parse image URL from API response", 
+
+        if resp_json.get("success") and resp_json.get("data"):
+            image_url = resp_json["data"][0].get("image_url", "")
+        elif resp_json.get("error"):
+            return jsonify({
+                "error": resp_json["error"].get("message", "API error"),
                 "raw_content": resp_json
-             }), 500
+            }), 400
+        else:
+            image_url = ""
+
+        if not image_url:
+            return jsonify({
+                "error": "Could not parse image URL from API response",
+                "raw_content": resp_json
+            }), 500
 
         return jsonify({
             "image_url": image_url,
