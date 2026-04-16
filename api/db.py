@@ -31,7 +31,7 @@ def ensure_schema(conn):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS generations (
+                CREATE TABLE IF NOT EXISTS fakemans (
                     id BIGSERIAL PRIMARY KEY,
                     task_id TEXT UNIQUE,
                     image_url TEXT NOT NULL,
@@ -39,10 +39,10 @@ def ensure_schema(conn):
                     style TEXT,
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 );
-                CREATE INDEX IF NOT EXISTS idx_generations_created_at
-                    ON generations (created_at DESC);
-                CREATE INDEX IF NOT EXISTS idx_generations_style_created
-                    ON generations (style, created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_fakemans_created_at
+                    ON fakemans (created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_fakemans_style_created
+                    ON fakemans (style, created_at DESC);
                 """
             )
         conn.commit()
@@ -62,7 +62,7 @@ def save_generation(image_url, prompt=None, style=None, task_id=None):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO generations (task_id, image_url, prompt, style)
+                INSERT INTO fakemans (task_id, image_url, prompt, style)
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (task_id) DO NOTHING
                 """,
@@ -92,7 +92,7 @@ def list_gallery(limit=24, style=None, offset=0):
         off = max(0, min(int(offset), 10_000))
         sql_select = """
                 SELECT id, image_url, prompt, style, created_at
-                FROM generations
+                FROM fakemans
                 """
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             if style:
