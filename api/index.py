@@ -30,6 +30,8 @@ OPENROUTER_URL = os.environ.get("OPENROUTER_URL", "https://openrouter.ai/api/v1/
 OPENROUTER_HTTP_REFERER = os.environ.get("OPENROUTER_HTTP_REFERER", "https://fake-man.vercel.app")
 OPENROUTER_APP_TITLE = os.environ.get("OPENROUTER_APP_TITLE", "fake-man")
 OPENROUTER_TIMEOUT = int(os.environ.get("OPENROUTER_TIMEOUT", "90"))
+# 推理模型会把大量 token 用在 reasoning 上，过小会导致 content 为空且 finish_reason=length
+OPENROUTER_INSPIRE_MAX_TOKENS = int(os.environ.get("OPENROUTER_INSPIRE_MAX_TOKENS", "2048"))
 
 STYLE_GUIDANCE = {
     "alternate": (
@@ -99,6 +101,56 @@ def resolve_callback_url():
     return f"{request.url_root.rstrip('/')}/api/banana/callback"
 
 
+def _truthy_env(name, default="false"):
+    v = os.environ.get(name)
+    if v is None:
+        return default.lower() in ("1", "true", "yes")
+    return v.strip().lower() in ("1", "true", "yes")
+
+
+def _assistant_visible_text(message):
+    """Normalize OpenRouter / multi-vendor assistant message to plain text."""
+    if not isinstance(message, dict):
+        return ""
+    content = message.get("content")
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "text" and block.get("text"):
+                parts.append(str(block["text"]))
+        joined = "".join(parts).strip()
+        if joined:
+            return joined
+    return ""
+
+
+def _openrouter_inspire_request_body(messages, temperature):
+    """Build chat/completions JSON; large max_tokens so reasoning models still emit content."""
+    body = {
+        "model": OPENROUTER_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max(256, min(OPENROUTER_INSPIRE_MAX_TOKENS, 8192)),
+    }
+    # 可选：OpenRouter unified reasoning（见官方 reasoning-tokens 文档）
+    reasoning = {}
+    r_max = (os.environ.get("OPENROUTER_INSPIRE_REASONING_MAX_TOKENS") or "").strip()
+    if r_max.isdigit() and int(r_max) > 0:
+        reasoning["max_tokens"] = min(int(r_max), 4096)
+    if _truthy_env("OPENROUTER_INSPIRE_REASONING_EXCLUDE", "false"):
+        reasoning["exclude"] = True
+    effort = (os.environ.get("OPENROUTER_INSPIRE_REASONING_EFFORT") or "").strip()
+    if effort:
+        reasoning["effort"] = effort
+    if reasoning:
+        body["reasoning"] = reasoning
+    return body
+
+
 @app.route('/api/inspire', methods=['POST'])
 def inspire():
     """用 OpenRouter 大模型生成一条文生图描述（供「随机灵感」使用）。"""
@@ -116,6 +168,11 @@ def inspire():
         "请生成一条新的、与常见套路不太重复的描述。"
     )
 
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
     try:
         resp = requests.post(
             OPENROUTER_URL,
@@ -125,15 +182,7 @@ def inspire():
                 "HTTP-Referer": OPENROUTER_HTTP_REFERER,
                 "X-Title": OPENROUTER_APP_TITLE,
             },
-            json={
-                "model": OPENROUTER_MODEL,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": user},
-                ],
-                "temperature": 0.95,
-                "max_tokens": 500,
-            },
+            json=_openrouter_inspire_request_body(messages, 0.95),
             timeout=OPENROUTER_TIMEOUT,
         )
         resp.raise_for_status()
@@ -147,10 +196,18 @@ def inspire():
         if not choices:
             return jsonify({"error": "Empty choices from OpenRouter", "raw": payload}), 502
 
-        content = (choices[0].get("message") or {}).get("content") or ""
-        text = content.strip()
+        msg0 = choices[0].get("message") or {}
+        text = _assistant_visible_text(msg0)
+        finish = choices[0].get("finish_reason")
         if not text:
-            return jsonify({"error": "Model returned empty text", "raw": payload}), 502
+            hint = (
+                "模型未输出正文（常见于推理模型把额度全用在 reasoning 上）。"
+                "已默认提高 max_tokens 并限制 reasoning；仍失败可设置 OPENROUTER_INSPIRE_REASONING_EFFORT=minimal "
+                "或换用非推理模型。"
+            )
+            if finish == "length":
+                hint += f"（本次 finish_reason=length）"
+            return jsonify({"error": hint, "raw": payload}), 502
 
         return jsonify({"prompt": text, "style": style, "model": OPENROUTER_MODEL})
 
