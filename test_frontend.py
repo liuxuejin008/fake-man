@@ -29,7 +29,7 @@ def test_page_load():
 
     # 检查风格标签
     style_tabs = soup.find_all('button', class_='style-tab')
-    assert len(style_tabs) >= 4, "应该至少有4种风格"
+    assert len(style_tabs) >= 5, "应该至少有5种风格"
 
     print("  ✅ 页面加载正常")
     return True
@@ -179,7 +179,7 @@ def test_style_presets():
     js_content = response.text
 
     # 检查风格定义
-    required_styles = ['cyberpunk', 'anime', 'realistic', 'fantasy']
+    required_styles = ['alternate', 'cyberpunk', 'anime', 'realistic', 'fantasy']
 
     for style in required_styles:
         # 检查风格定义（支持多种格式）

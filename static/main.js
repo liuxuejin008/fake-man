@@ -29,6 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ==================== 风格预设 ====================
     const stylePresets = {
+        alternate: {
+            name: '伪人',
+            prompts: [
+                'A person standing in a hallway, slightly wrong proportions, empty eyes that stare without blinking, subtle facial asymmetry, faded photograph quality, unsettling stillness, Mandela Catalogue style',
+                'A woman at a bus stop, skin too smooth and waxy, smile that extends slightly too wide, dead empty eyes, surveillance camera footage aesthetic, liminal space horror',
+                'A man in a business suit, neck bent at an unnatural angle, pupils perfectly round and too black, no shadow cast properly, analog horror, VHS quality',
+                'A child in a classroom, body frozen mid-motion, arms at wrong angles, eyes look directly at camera without emotion, Mandela Catalogue alternate style',
+                'A figure in a doorway, face partially obscured, one arm longer than the other, skin has subtle texture pattern like static, liminal horror, analog distortion'
+            ]
+        },
         cyberpunk: {
             name: '赛博朋克',
             prompts: [
