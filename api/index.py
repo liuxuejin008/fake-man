@@ -17,6 +17,21 @@ BANANA_API_URL = os.environ.get("BANANA_API_URL", "https://api.acedata.cloud/nan
 BANANA_SUBMIT_TIMEOUT = int(os.environ.get("BANANA_SUBMIT_TIMEOUT", "30"))
 BANANA_CALLBACK_URL = os.environ.get("BANANA_CALLBACK_URL")
 
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "minimax/minimax-m2.7")
+OPENROUTER_URL = os.environ.get("OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions")
+OPENROUTER_HTTP_REFERER = os.environ.get("OPENROUTER_HTTP_REFERER", "https://fake-man.vercel.app")
+OPENROUTER_APP_TITLE = os.environ.get("OPENROUTER_APP_TITLE", "fake-man")
+OPENROUTER_TIMEOUT = int(os.environ.get("OPENROUTER_TIMEOUT", "90"))
+
+STYLE_GUIDANCE = {
+    "alternate": "伪人（Alternate）/《曼德拉记录》气质：像真人但细微不对劲、空洞眼神、诡异微笑、监控/伪纪录片质感，避免血腥直白描写。",
+    "cyberpunk": "赛博朋克：霓虹、雨夜、义体/全息元素，人物与场景统一。",
+    "anime": "日系动漫风：角色造型、色彩、背景符合该风格。",
+    "realistic": "写实摄影风：自然光或棚拍质感，细节可信。",
+    "fantasy": "奇幻：魔法、异世界、史诗氛围，人物与服饰统一。",
+}
+
 # 存储生成任务状态
 task_store = {}
 task_lock = threading.Lock()
@@ -35,6 +50,74 @@ def resolve_callback_url():
     if BANANA_CALLBACK_URL:
         return BANANA_CALLBACK_URL
     return f"{request.url_root.rstrip('/')}/api/banana/callback"
+
+
+@app.route('/api/inspire', methods=['POST'])
+def inspire():
+    """用 OpenRouter 大模型生成一条文生图描述（供「随机灵感」使用）。"""
+    if not OPENROUTER_API_KEY:
+        return jsonify({"error": "OPENROUTER_API_KEY not configured."}), 500
+
+    data = request.get_json(silent=True) or {}
+    style = (data.get("style") or "realistic").strip()
+    guidance = STYLE_GUIDANCE.get(style, STYLE_GUIDANCE["realistic"])
+
+    system = (
+        "你是文生图提示词助手。只输出一段可直接粘贴进绘图模型的中文描述，"
+        "不要标题、不要列表、不要引号包裹、不要解释过程。"
+        "长度约 80～200 字，信息具体（人物外观、服装、环境、光线、镜头感）。"
+    )
+    user = (
+        f"当前风格：{style}。\n"
+        f"风格要点：{guidance}\n"
+        "请生成一条新的、与常见套路不太重复的描述。"
+    )
+
+    try:
+        resp = requests.post(
+            OPENROUTER_URL,
+            headers={
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": OPENROUTER_HTTP_REFERER,
+                "X-Title": OPENROUTER_APP_TITLE,
+            },
+            json={
+                "model": OPENROUTER_MODEL,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": 0.95,
+                "max_tokens": 500,
+            },
+            timeout=OPENROUTER_TIMEOUT,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+        err = payload.get("error")
+        if err:
+            msg = err.get("message", str(err)) if isinstance(err, dict) else str(err)
+            return jsonify({"error": msg, "raw": payload}), 502
+
+        choices = payload.get("choices") or []
+        if not choices:
+            return jsonify({"error": "Empty choices from OpenRouter", "raw": payload}), 502
+
+        content = (choices[0].get("message") or {}).get("content") or ""
+        text = content.strip()
+        if not text:
+            return jsonify({"error": "Model returned empty text", "raw": payload}), 502
+
+        return jsonify({"prompt": text, "style": style, "model": OPENROUTER_MODEL})
+
+    except requests.exceptions.Timeout:
+        return jsonify({"error": f"OpenRouter request timed out after {OPENROUTER_TIMEOUT}s."}), 504
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": f"OpenRouter request failed: {str(e)}"}), 502
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/generate', methods=['POST'])
 def generate():

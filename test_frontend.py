@@ -94,7 +94,9 @@ def test_js_features():
         'shareBtn',
         'pollForResult',
         'updateProgress',
-        'sleep'
+        'sleep',
+        'fetchRandomInspire',
+        '/api/inspire'
     ]
 
     for feature in required_features:
@@ -119,6 +121,10 @@ def test_api_endpoints():
     response = requests.get(f"{BASE_URL}/api/generate")
     assert response.status_code == 405, "GET /api/generate 应该返回 405"
     print("  ✅ /api/generate 只接受 POST 方法")
+
+    response = requests.get(f"{BASE_URL}/api/inspire")
+    assert response.status_code == 405, "GET /api/inspire 应该返回 405"
+    print("  ✅ /api/inspire 只接受 POST 方法")
 
     # 模拟回调并检查状态查询
     mock_task_id = "test-callback-task-id"

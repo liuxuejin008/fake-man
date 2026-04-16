@@ -117,19 +117,48 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ==================== 随机提示词 ====================
-    btnRandom.addEventListener('click', () => {
-        const prompts = stylePresets[currentStyle].prompts;
-        const randomIndex = Math.floor(Math.random() * prompts.length);
-        promptInput.value = prompts[randomIndex];
+    // ==================== 随机灵感（OpenRouter 大模型） ====================
+    async function fetchRandomInspire() {
+        const response = await fetch('/api/inspire', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ style: currentStyle })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || '灵感生成失败');
+        }
+        const text = (data.prompt || '').trim();
+        if (!text) {
+            throw new Error('模型未返回有效描述');
+        }
+        return text;
+    }
 
-        // 震动动画
-        promptInput.style.animation = 'none';
-        setTimeout(() => {
-            promptInput.style.animation = 'shake 0.4s ease';
-        }, 10);
+    btnRandom.addEventListener('click', async () => {
+        const prevLabel = btnRandom.querySelector('.btn-text')?.textContent;
+        btnRandom.disabled = true;
+        btnGenerate.disabled = true;
+        const textEl = btnRandom.querySelector('.btn-text');
+        if (textEl) textEl.textContent = '生成中…';
 
-        showSuccess('已随机选择风格描述');
+        try {
+            promptInput.value = await fetchRandomInspire();
+
+            promptInput.style.animation = 'none';
+            setTimeout(() => {
+                promptInput.style.animation = 'shake 0.4s ease';
+            }, 10);
+
+            showSuccess('AI 已生成新的灵感描述');
+        } catch (e) {
+            console.error(e);
+            showError(e.message || '灵感生成失败');
+        } finally {
+            btnRandom.disabled = false;
+            btnGenerate.disabled = false;
+            if (textEl && prevLabel) textEl.textContent = prevLabel;
+        }
     });
 
     // ==================== 生成图片 ====================
