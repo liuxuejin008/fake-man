@@ -153,18 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || '生成失败');
             }
 
-            if (data.image_url) {
-                // 加载图片
+            if (data.status === 'completed' && data.image_url) {
+                // 立即返回图片
                 await loadImage(data.image_url);
                 currentImageURL = data.image_url;
-
-                // 保存到历史记录
                 addToHistory(data.image_url, finalPrompt);
-
-                // 显示成功消息
                 showSuccess('图片生成成功！');
+            } else if (data.task_id) {
+                // 开始轮询
+                await pollForResult(data.task_id, finalPrompt);
             } else {
-                throw new Error('未返回有效的图片链接');
+                throw new Error('无效的响应格式');
             }
 
         } catch (error) {
@@ -176,6 +175,61 @@ document.addEventListener('DOMContentLoaded', () => {
             btnGenerate.disabled = false;
             btnRandom.disabled = false;
         }
+    }
+
+    // ==================== 轮询图片生成状态 ====================
+    async function pollForResult(taskId, prompt) {
+        const maxAttempts = 120;
+        let attempts = 0;
+        const pollInterval = 5000;
+
+        updateProgress(0);
+
+        while (attempts < maxAttempts) {
+            try {
+                const response = await fetch(`/api/status/${taskId}`);
+                const data = await response.json();
+
+                if (data.status === 'completed' && data.image_url) {
+                    await loadImage(data.image_url);
+                    currentImageURL = data.image_url;
+                    addToHistory(data.image_url, prompt);
+                    showSuccess('图片生成成功！');
+                    loader.classList.add('hidden');
+                    return;
+                } else if (data.status === 'failed') {
+                    throw new Error(data.error || '图片生成失败');
+                }
+
+                const progress = Math.min((attempts * pollInterval / 200000) * 100, 95);
+                updateProgress(progress);
+
+                attempts++;
+                await sleep(pollInterval);
+
+            } catch (error) {
+                console.error('Polling error:', error);
+                loader.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                showError(error.message);
+                return;
+            }
+        }
+
+        loader.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        showError('图片生成超时，请稍后重试');
+    }
+
+    function updateProgress(percent) {
+        const progressFill = document.querySelector('.progress-fill');
+        if (progressFill) {
+            progressFill.style.width = percent + '%';
+        }
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     function loadImage(url) {

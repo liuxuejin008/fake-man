@@ -91,12 +91,34 @@ def test_js_features():
         'stylePresets',
         'createParticles',
         'downloadBtn',
-        'shareBtn'
+        'shareBtn',
+        'pollForResult',
+        'updateProgress',
+        'sleep'
     ]
 
     for feature in required_features:
         assert feature in js_content, f"缺少 JS 功能: {feature}"
         print(f"  ✅ JS 功能 {feature} 存在")
+
+    return True
+
+def test_api_endpoints():
+    """测试 API 端点"""
+    print("\n🔌 测试 API 端点...")
+
+    # 测试不存在的 task_id
+    response = requests.get(f"{BASE_URL}/api/status/nonexistent-task")
+    assert response.status_code == 404, "应该返回 404 for not found task"
+
+    data = response.json()
+    assert data.get("status") == "not_found", "状态应该是 not_found"
+    print("  ✅ /api/status/<task_id> 端点正常")
+
+    # 测试 generate 端点需要 POST
+    response = requests.get(f"{BASE_URL}/api/generate")
+    assert response.status_code == 405, "GET /api/generate 应该返回 405"
+    print("  ✅ /api/generate 只接受 POST 方法")
 
     return True
 
@@ -187,7 +209,8 @@ def run_all_tests():
         test_js_features,
         test_responsive_design,
         test_html_structure,
-        test_style_presets
+        test_style_presets,
+        test_api_endpoints
     ]
 
     passed = 0
