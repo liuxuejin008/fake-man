@@ -120,6 +120,32 @@ def test_api_endpoints():
     assert response.status_code == 405, "GET /api/generate 应该返回 405"
     print("  ✅ /api/generate 只接受 POST 方法")
 
+    # 模拟回调并检查状态查询
+    mock_task_id = "test-callback-task-id"
+    callback_payload = {
+        "success": True,
+        "task_id": mock_task_id,
+        "trace_id": "trace-test-id",
+        "data": [
+            {
+                "prompt": "test prompt",
+                "image_url": "https://example.com/test.png"
+            }
+        ]
+    }
+    callback_response = requests.post(
+        f"{BASE_URL}/api/banana/callback",
+        json=callback_payload
+    )
+    assert callback_response.status_code == 200, "callback 端点应返回 200"
+
+    status_response = requests.get(f"{BASE_URL}/api/status/{mock_task_id}")
+    assert status_response.status_code == 200, "callback 写入后应可查询任务状态"
+    status_data = status_response.json()
+    assert status_data.get("status") == "completed", "回调成功后状态应为 completed"
+    assert status_data.get("image_url") == "https://example.com/test.png", "image_url 不匹配"
+    print("  ✅ /api/banana/callback 异步回调正常")
+
     return True
 
 def test_responsive_design():

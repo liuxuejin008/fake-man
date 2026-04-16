@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearHistory = document.getElementById('clearHistory');
 
     // ==================== 状态管理 ====================
-    let currentStyle = 'cyberpunk';
+    let currentStyle = 'alternate';
     let currentImageURL = '';
     let history = JSON.parse(localStorage.getItem('synth_history') || '[]');
     let isDarkTheme = true;

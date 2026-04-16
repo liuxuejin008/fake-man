@@ -1,8 +1,6 @@
 import os
-import json
 import requests
 import threading
-import time
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 
@@ -16,6 +14,8 @@ app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 
 BANANA_API_KEY = os.environ.get("BANANA_API_KEY")
 BANANA_API_URL = os.environ.get("BANANA_API_URL", "https://api.acedata.cloud/nano-banana/images")
+BANANA_SUBMIT_TIMEOUT = int(os.environ.get("BANANA_SUBMIT_TIMEOUT", "30"))
+BANANA_CALLBACK_URL = os.environ.get("BANANA_CALLBACK_URL")
 
 # 存储生成任务状态
 task_store = {}
@@ -30,6 +30,12 @@ def serve_static(filename):
 def home():
     return render_template('index.html')
 
+
+def resolve_callback_url():
+    if BANANA_CALLBACK_URL:
+        return BANANA_CALLBACK_URL
+    return f"{request.url_root.rstrip('/')}/api/banana/callback"
+
 @app.route('/api/generate', methods=['POST'])
 def generate():
     if not BANANA_API_KEY:
@@ -39,8 +45,16 @@ def generate():
     prompt = data.get('prompt', 'A beautiful 20-year-old asian girl, cyberpunk city vibe, neon lights, clear details, trending on artstation')
 
     enhanced_prompt = f"Photo portrait of a youthful 20 year old individual. {prompt}. Ultra realistic, 8k resolution, cinematic lighting, photorealistic."
+    callback_url = resolve_callback_url()
 
     try:
+        request_body = {
+            "action": "generate",
+            "prompt": enhanced_prompt,
+            "aspect_ratio": "9:16",
+            "model": "nano-banana-2",
+            "callback_url": callback_url
+        }
         response = requests.post(
             url=BANANA_API_URL,
             headers={
@@ -48,13 +62,8 @@ def generate():
                 "Content-Type": "application/json",
                 "Accept": "application/json"
             },
-            json={
-                "action": "generate",
-                "prompt": enhanced_prompt,
-                "aspect_ratio": "9:16",
-                "model": "nano-banana-2"
-            },
-            timeout=60
+            json=request_body,
+            timeout=BANANA_SUBMIT_TIMEOUT
         )
 
         response.raise_for_status()
@@ -62,8 +71,16 @@ def generate():
 
         if resp_json.get("success") and resp_json.get("data"):
             image_url = resp_json["data"][0].get("image_url", "")
+            task_id = resp_json.get("task_id")
+            if task_id:
+                with task_lock:
+                    task_store[task_id] = {
+                        "status": "completed",
+                        "image_url": image_url,
+                        "prompt": prompt
+                    }
             return jsonify({
-                "task_id": resp_json.get("task_id"),
+                "task_id": task_id,
                 "status": "completed",
                 "image_url": image_url,
                 "prompt_used": prompt
@@ -74,15 +91,16 @@ def generate():
                 task_store[task_id] = {
                     "status": "processing",
                     "prompt": prompt,
-                    "enhanced_prompt": enhanced_prompt
+                    "enhanced_prompt": enhanced_prompt,
+                    "callback_url": callback_url,
+                    "trace_id": resp_json.get("trace_id")
                 }
-
-            threading.Thread(target=poll_task, args=(task_id,), daemon=True).start()
 
             return jsonify({
                 "task_id": task_id,
                 "status": "processing",
-                "message": "Image generation started. Poll /api/status/{task_id} for updates."
+                "message": "Image generation started. Result will be updated by callback.",
+                "status_url": f"/api/status/{task_id}"
             })
 
         elif resp_json.get("error"):
@@ -96,61 +114,43 @@ def generate():
                 "raw_content": resp_json
             }), 500
 
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "error": f"API submit timed out after {BANANA_SUBMIT_TIMEOUT}s."
+        }), 504
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"API request failed: {str(e)}"}), 500
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 
-def poll_task(task_id):
-    """后台轮询任务状态"""
-    time.sleep(5)
-    max_attempts = 120
-    attempt = 0
+@app.route('/api/banana/callback', methods=['POST'])
+def banana_callback():
+    payload = request.get_json(silent=True) or {}
+    task_id = payload.get("task_id")
 
-    while attempt < max_attempts:
-        try:
-            response = requests.get(
-                f"{BANANA_API_URL}/{task_id}",
-                headers={
-                    "Authorization": f"Bearer {BANANA_API_KEY}",
-                    "Accept": "application/json"
-                },
-                timeout=30
-            )
+    if not task_id:
+        return jsonify({"error": "Missing task_id in callback payload"}), 400
 
-            if response.status_code == 200:
-                resp_json = response.json()
-                with task_lock:
-                    if resp_json.get("success") and resp_json.get("data"):
-                        image_url = resp_json["data"][0].get("image_url", "")
-                        task_store[task_id] = {
-                            "status": "completed",
-                            "image_url": image_url
-                        }
-                        return
-                    elif resp_json.get("finished_at"):
-                        with task_lock:
-                            task_store[task_id] = {
-                                "status": "completed",
-                                "image_url": resp_json.get("data", [{}])[0].get("image_url", ""),
-                                "finished_at": resp_json.get("finished_at"),
-                                "elapsed": resp_json.get("elapsed", 0)
-                            }
-                        return
+    callback_result = {
+        "status": "completed" if payload.get("success") and payload.get("data") else "failed",
+        "trace_id": payload.get("trace_id"),
+        "raw_content": payload
+    }
 
-            attempt += 1
-            time.sleep(5)
+    if payload.get("data"):
+        callback_result["image_url"] = payload["data"][0].get("image_url", "")
+        callback_result["prompt"] = payload["data"][0].get("prompt", "")
 
-        except Exception as e:
-            attempt += 1
-            time.sleep(5)
+    if payload.get("error"):
+        callback_result["error"] = payload["error"].get("message", "Callback returned error")
 
     with task_lock:
-        task_store[task_id] = {
-            "status": "failed",
-            "error": "Timeout waiting for image generation"
-        }
+        existing = task_store.get(task_id, {})
+        merged = {**existing, **callback_result}
+        task_store[task_id] = merged
+
+    return jsonify({"ok": True, "task_id": task_id})
 
 
 @app.route('/api/status/<task_id>', methods=['GET'])
