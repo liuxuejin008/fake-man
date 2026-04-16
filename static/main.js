@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ prompt: finalPrompt })
+                body: JSON.stringify({ prompt: finalPrompt, style: currentStyle })
             });
 
             const data = await response.json();

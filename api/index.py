@@ -25,12 +25,44 @@ OPENROUTER_APP_TITLE = os.environ.get("OPENROUTER_APP_TITLE", "fake-man")
 OPENROUTER_TIMEOUT = int(os.environ.get("OPENROUTER_TIMEOUT", "90"))
 
 STYLE_GUIDANCE = {
-    "alternate": "伪人（Alternate）/《曼德拉记录》气质：像真人但细微不对劲、空洞眼神、诡异微笑、监控/伪纪录片质感，避免血腥直白描写。",
+    "alternate": (
+        "「伪人」Alternates：源自《曼德拉记录》一类模仿人类的存在，恐怖谷——远看像普通人，近看眼神空洞或对焦不对、微笑略宽、"
+        "肢体角度略反关节、影子/比例微妙错位；中文语境也常指《寻找伪人》式日常场景里的怪异非人感，可带一点网络玩梗式的「不对劲」，"
+        "但核心仍是违和与不安，不是普通帅哥美女写真。画质倾向监控、门铃摄像头、伪纪录片或褪色家庭录像。"
+        "避免血腥直白描写。"
+    ),
     "cyberpunk": "赛博朋克：霓虹、雨夜、义体/全息元素，人物与场景统一。",
     "anime": "日系动漫风：角色造型、色彩、背景符合该风格。",
     "realistic": "写实摄影风：自然光或棚拍质感，细节可信。",
     "fantasy": "奇幻：魔法、异世界、史诗氛围，人物与服饰统一。",
 }
+
+INSPIRE_SYSTEM_DEFAULT = (
+    "你是文生图提示词助手。只输出一段可直接粘贴进绘图模型的中文描述，"
+    "不要标题、不要列表、不要引号包裹、不要解释过程。"
+    "长度约 80～200 字，信息具体（人物外观、服装、环境、光线、镜头感）。"
+)
+
+INSPIRE_SYSTEM_ALTERNATE = (
+    "你是文生图提示词助手，专精「伪人 / Alternate」题材。只输出一段可直接粘贴进绘图模型的中文描述，"
+    "不要标题、不要列表、不要引号包裹、不要解释过程。长度约 80～200 字。"
+    "必须写出恐怖谷：外表像日常里的普通人，但在眼神、眨眼频率、嘴角弧度、脖颈或手指关节、皮肤蜡感、"
+    "与门框/台阶的比例等处写出「说不清哪里不对」的违和；场景用走廊、电梯口、楼道窗、便利店角落、"
+    "教室后排等日常或阈限空间，镜头像监控、行车记录仪、门铃鱼眼或褪色家庭录像。"
+    "禁止把主轴写成网红精致妆容、潮流穿搭、影棚布光；可略带中文互联网的调侃式「非人感」但不要写成纯搞笑段子。"
+)
+
+PROMPT_WRAP_REALISTIC = (
+    "Photo portrait of a youthful 20 year old individual. {prompt}. "
+    "Ultra realistic, 8k resolution, cinematic lighting, photorealistic."
+)
+
+PROMPT_WRAP_ALTERNATE = (
+    "Analog horror, Mandela Catalogue–style uncanny human figure. {prompt}. "
+    "Surveillance CCTV or doorbell camera angle, heavy grain, slight lens distortion, "
+    "liminal empty interior, subtly wrong anatomy or facial symmetry, dead empty eyes; "
+    "not a glamorous beauty portrait, no explicit gore."
+)
 
 # 存储生成任务状态
 task_store = {}
@@ -62,13 +94,9 @@ def inspire():
     style = (data.get("style") or "realistic").strip()
     guidance = STYLE_GUIDANCE.get(style, STYLE_GUIDANCE["realistic"])
 
-    system = (
-        "你是文生图提示词助手。只输出一段可直接粘贴进绘图模型的中文描述，"
-        "不要标题、不要列表、不要引号包裹、不要解释过程。"
-        "长度约 80～200 字，信息具体（人物外观、服装、环境、光线、镜头感）。"
-    )
+    system = INSPIRE_SYSTEM_ALTERNATE if style == "alternate" else INSPIRE_SYSTEM_DEFAULT
     user = (
-        f"当前风格：{style}。\n"
+        f"当前风格代码：{style}。\n"
         f"风格要点：{guidance}\n"
         "请生成一条新的、与常见套路不太重复的描述。"
     )
@@ -124,10 +152,16 @@ def generate():
     if not BANANA_API_KEY:
         return jsonify({"error": "BANANA API Key not configured."}), 500
 
-    data = request.json
-    prompt = data.get('prompt', 'A beautiful 20-year-old asian girl, cyberpunk city vibe, neon lights, clear details, trending on artstation')
-
-    enhanced_prompt = f"Photo portrait of a youthful 20 year old individual. {prompt}. Ultra realistic, 8k resolution, cinematic lighting, photorealistic."
+    data = request.json or {}
+    prompt = data.get(
+        'prompt',
+        'A beautiful 20-year-old asian girl, cyberpunk city vibe, neon lights, clear details, trending on artstation',
+    )
+    gen_style = (data.get("style") or "realistic").strip()
+    if gen_style == "alternate":
+        enhanced_prompt = PROMPT_WRAP_ALTERNATE.format(prompt=prompt)
+    else:
+        enhanced_prompt = PROMPT_WRAP_REALISTIC.format(prompt=prompt)
     callback_url = resolve_callback_url()
 
     try:
