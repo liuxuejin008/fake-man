@@ -41,6 +41,8 @@ def ensure_schema(conn):
                 );
                 CREATE INDEX IF NOT EXISTS idx_generations_created_at
                     ON generations (created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_generations_style_created
+                    ON generations (style, created_at DESC);
                 """
             )
         conn.commit()
@@ -79,24 +81,39 @@ def save_generation(image_url, prompt=None, style=None, task_id=None):
         conn.close()
 
 
-def list_gallery(limit=24):
-    """Recent generations, newest first."""
+def list_gallery(limit=24, style=None, offset=0):
+    """Recent generations, newest first. Optional style (e.g. alternate) and offset."""
     conn = _connect()
     if not conn:
         return []
     try:
         ensure_schema(conn)
         cap = max(1, min(int(limit), 100))
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(
-                """
+        off = max(0, min(int(offset), 10_000))
+        sql_select = """
                 SELECT id, image_url, prompt, style, created_at
                 FROM generations
+                """
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            if style:
+                cur.execute(
+                    sql_select
+                    + """
+                WHERE style = %s
                 ORDER BY created_at DESC
-                LIMIT %s
+                LIMIT %s OFFSET %s
                 """,
-                (cap,),
-            )
+                    (style, cap, off),
+                )
+            else:
+                cur.execute(
+                    sql_select
+                    + """
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                    (cap, off),
+                )
             rows = cur.fetchall()
         out = []
         for r in rows:

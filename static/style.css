@@ -374,6 +374,11 @@ textarea:focus {
     margin-bottom: 1rem;
 }
 
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -393,6 +398,72 @@ textarea:focus {
     font-weight: 700;
     letter-spacing: 2px;
     color: var(--text-main);
+}
+
+.top-nav--with-links {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "logo actions"
+        "links links";
+    align-items: center;
+    column-gap: 1rem;
+    row-gap: 0.65rem;
+}
+
+.top-nav--with-links .logo-link {
+    grid-area: logo;
+}
+
+.top-nav--with-links .nav-main {
+    grid-area: links;
+    justify-self: center;
+}
+
+.top-nav--with-links .nav-actions {
+    grid-area: actions;
+    justify-self: end;
+}
+
+@media (min-width: 720px) {
+    .top-nav--with-links {
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas: "logo links actions";
+    }
+
+    .top-nav--with-links .nav-main {
+        justify-self: center;
+    }
+}
+
+.nav-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-main__link {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 0.42rem 0.95rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    transition: var(--transition);
+}
+
+.nav-main__link:hover {
+    color: var(--text-main);
+    border-color: var(--glass-border);
+}
+
+.nav-main__link--active {
+    color: var(--text-main);
+    background: rgba(124, 58, 237, 0.18);
+    border-color: rgba(124, 58, 237, 0.4);
 }
 
 .nav-actions {
@@ -798,6 +869,194 @@ textarea:focus {
     0%, 100% { transform: translateX(0); }
     25% { transform: translateX(-5px); }
     75% { transform: translateX(5px); }
+}
+
+/* ========== 伪人图库页（瀑布流） ========== */
+body.page-gallery {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 1rem 0 3rem;
+}
+
+.container--gallery {
+    max-width: 1280px;
+    width: 94%;
+}
+
+.gallery-page-header {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.gallery-page-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    background: linear-gradient(to right, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.gallery-page-desc {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    font-weight: 300;
+    max-width: 36rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.gallery-page-status {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    min-height: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.gallery-page-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--glass-border);
+}
+
+.gallery-page-footer a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.gallery-page-footer a:hover {
+    text-decoration: underline;
+}
+
+.masonry {
+    column-count: 4;
+    column-gap: 12px;
+}
+
+@media (max-width: 1100px) {
+    .masonry {
+        column-count: 3;
+    }
+}
+
+@media (max-width: 700px) {
+    .masonry {
+        column-count: 2;
+    }
+}
+
+.masonry-brick {
+    break-inside: avoid;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    transition: var(--transition);
+}
+
+.masonry-brick:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.masonry-brick:hover {
+    box-shadow: 0 8px 28px rgba(124, 58, 237, 0.25);
+    border-color: rgba(124, 58, 237, 0.45);
+    transform: translateY(-2px);
+}
+
+.masonry-brick img {
+    width: 100%;
+    height: auto;
+    display: block;
+    vertical-align: middle;
+}
+
+.masonry-sentinel {
+    height: 4px;
+    margin-top: 1rem;
+}
+
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.lightbox.hidden {
+    display: none;
+}
+
+.lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    border: none;
+    cursor: zoom-out;
+}
+
+.lightbox-inner {
+    position: relative;
+    z-index: 1;
+    max-width: min(96vw, 520px);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.lightbox-inner img {
+    max-width: 100%;
+    max-height: 75vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.lightbox-close {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2001;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-main);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.lightbox-caption {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+    max-width: 100%;
+    line-height: 1.45;
+    overflow-y: auto;
+    max-height: 18vh;
 }
 
 /* 响应式 */

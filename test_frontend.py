@@ -34,13 +34,28 @@ def test_page_load():
     print("  ✅ 页面加载正常")
     return True
 
+
+def test_gallery_page():
+    """伪人图库页与静态资源"""
+    print("\n🖼 测试伪人图库页...")
+    response = requests.get(f"{BASE_URL}/gallery")
+    assert response.status_code == 200, "图库页加载失败"
+    soup = BeautifulSoup(response.text, "html.parser")
+    assert soup.find(id="masonry"), "缺少瀑布流容器"
+    assert soup.find(id="masonrySentinel"), "缺少滚动哨兵"
+    assert soup.find("a", href="/gallery", class_="nav-main__link--active"), "图库导航高亮异常"
+    print("  ✅ 图库页 HTML 正常")
+    return True
+
+
 def test_static_files():
     """测试静态文件加载"""
     print("\n📦 测试静态文件...")
 
     files_to_test = [
         '/static/style.css',
-        '/static/main.js'
+        '/static/main.js',
+        '/static/gallery.js',
     ]
 
     for file in files_to_test:
@@ -183,7 +198,8 @@ def test_html_structure():
 
     # 检查导航
     assert soup.find('nav', class_='top-nav'), "缺少导航栏"
-    assert soup.find('div', class_='logo'), "缺少 Logo"
+    assert soup.find('a', class_='logo-link'), "缺少 Logo"
+    assert soup.find('nav', class_='nav-main'), "缺少主导航"
     assert soup.find('button', id='historyBtn'), "缺少历史记录按钮"
     assert soup.find('button', id='themeBtn'), "缺少主题切换按钮"
 
@@ -236,6 +252,7 @@ def run_all_tests():
 
     tests = [
         test_page_load,
+        test_gallery_page,
         test_static_files,
         test_css_features,
         test_js_features,

@@ -87,12 +87,22 @@ def home():
     return render_template('index.html')
 
 
+@app.route('/gallery')
+def gallery_page():
+    """瀑布流：已入库的伪人（alternate）风格作品。"""
+    return render_template('gallery.html')
+
+
 @app.route('/api/gallery', methods=['GET'])
 def gallery():
     """Recent images saved from successful generations (callback or sync)."""
     limit = request.args.get('limit', default=24, type=int)
-    items = list_gallery(limit)
-    return jsonify({"items": items})
+    offset = request.args.get('offset', default=0, type=int)
+    style = (request.args.get('style') or '').strip() or None
+    cap = max(1, min(limit if limit is not None else 24, 100))
+    items = list_gallery(limit=cap, style=style, offset=offset or 0)
+    has_more = len(items) == cap
+    return jsonify({"items": items, "has_more": has_more})
 
 
 def resolve_callback_url():

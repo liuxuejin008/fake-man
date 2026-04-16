@@ -28,11 +28,15 @@
 
     <div class="container glass-panel">
         <!-- 顶部导航 -->
-        <nav class="top-nav">
-            <div class="logo">
+        <nav class="top-nav top-nav--with-links" aria-label="页首">
+            <a href="/" class="logo logo-link" aria-label="SYNTH 首页">
                 <span class="logo-icon">◈</span>
                 <span class="logo-text">SYNTH</span>
-            </div>
+            </a>
+            <nav class="nav-main" aria-label="主导航">
+                <a href="/" class="nav-main__link nav-main__link--active" aria-current="page">生成</a>
+                <a href="/gallery" class="nav-main__link">伪人图库</a>
+            </nav>
             <div class="nav-actions">
                 <button class="icon-btn" id="historyBtn" title="历史记录">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

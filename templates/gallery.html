@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伪人图库 · SYNTH</title>
+    <meta name="description" content="已入库的伪人风格 AI 生成图，瀑布流浏览">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+</head>
+<body class="page-gallery">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="container container--gallery">
+        <nav class="top-nav top-nav--with-links" aria-label="页首">
+            <a href="/" class="logo logo-link" aria-label="返回生成首页">
+                <span class="logo-icon">◈</span>
+                <span class="logo-text">SYNTH</span>
+            </a>
+            <nav class="nav-main" aria-label="主导航">
+                <a href="/" class="nav-main__link">生成</a>
+                <a href="/gallery" class="nav-main__link nav-main__link--active" aria-current="page">伪人图库</a>
+            </nav>
+            <div class="nav-actions">
+                <button class="icon-btn" id="galleryThemeBtn" type="button" title="切换主题">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </nav>
+
+        <header class="gallery-page-header">
+            <h1 class="gallery-page-title">伪人图库</h1>
+            <p class="gallery-page-desc">仅展示风格为「伪人」且已保存至云端的生成记录 · 瀑布流加载更多</p>
+        </header>
+
+        <div id="galleryStatus" class="gallery-page-status" role="status"></div>
+
+        <div class="masonry" id="masonry" aria-live="polite"></div>
+        <div id="masonrySentinel" class="masonry-sentinel" aria-hidden="true"></div>
+
+        <footer class="footer gallery-page-footer">
+            <p><a href="/">返回生成器</a> · Powered by AI</p>
+        </footer>
+    </div>
+
+    <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="大图预览">
+        <button type="button" class="lightbox-backdrop" id="lightboxBackdrop" aria-label="关闭"></button>
+        <div class="lightbox-inner">
+            <button type="button" class="lightbox-close" id="lightboxClose" aria-label="关闭">&times;</button>
+            <img id="lightboxImg" src="" alt="">
+            <p id="lightboxCaption" class="lightbox-caption"></p>
+        </div>
+    </div>
+
+    <script src="/static/gallery.js"></script>
+</body>
+</html>
