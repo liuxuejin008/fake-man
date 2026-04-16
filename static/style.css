@@ -127,6 +127,73 @@ header {
     letter-spacing: 1px;
 }
 
+/* 首页云端图库 */
+.gallery-section {
+    text-align: center;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.gallery-header {
+    margin-bottom: 1rem;
+}
+
+.gallery-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: 0.06em;
+}
+
+.gallery-subtitle {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+    font-weight: 300;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 0.65rem;
+    min-height: 2.5rem;
+}
+
+.gallery-card {
+    position: relative;
+    padding: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--glass-border);
+    aspect-ratio: 9 / 16;
+    transition: var(--transition);
+}
+
+.gallery-card:hover,
+.gallery-card:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--primary), 0 8px 24px rgba(124, 58, 237, 0.35);
+    transform: translateY(-2px);
+}
+
+.gallery-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gallery-empty,
+.gallery-loading {
+    grid-column: 1 / -1;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0.75rem;
+    text-align: center;
+}
+
 /* 展示区 */
 .image-showcase {
     position: relative;

@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeHistory = document.getElementById('closeHistory');
     const historyList = document.getElementById('historyList');
     const clearHistory = document.getElementById('clearHistory');
+    const galleryGrid = document.getElementById('galleryGrid');
 
     // ==================== 状态管理 ====================
     let currentStyle = 'alternate';
@@ -86,6 +87,54 @@ document.addEventListener('DOMContentLoaded', () => {
         createParticles();
         updateHistoryList();
         applyTheme();
+        loadGallery();
+    }
+
+    async function loadGallery() {
+        if (!galleryGrid) return;
+        galleryGrid.innerHTML = '<p class="gallery-loading">加载中…</p>';
+        try {
+            const response = await fetch('/api/gallery?limit=24');
+            const data = await response.json();
+            if (!response.ok) {
+                galleryGrid.innerHTML = '<p class="gallery-empty">图库暂不可用</p>';
+                return;
+            }
+            const items = data.items || [];
+            galleryGrid.innerHTML = '';
+            if (!items.length) {
+                galleryGrid.innerHTML =
+                    '<p class="gallery-empty">暂无作品。配置 DATABASE_URL 并成功生成后，会显示在这里。</p>';
+                return;
+            }
+            items.forEach((item) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'gallery-card';
+                const hint = (item.prompt || '').slice(0, 140);
+                btn.title = hint;
+                const im = document.createElement('img');
+                im.src = item.image_url;
+                im.alt = '';
+                im.loading = 'lazy';
+                btn.appendChild(im);
+                btn.addEventListener('click', () => {
+                    currentImageURL = item.image_url;
+                    if (item.prompt) {
+                        promptInput.value = item.prompt;
+                    }
+                    placeholder.classList.add('hidden');
+                    loadImage(item.image_url).catch(() => {
+                        showError('图片加载失败');
+                    });
+                    imageActions.classList.remove('hidden');
+                });
+                galleryGrid.appendChild(btn);
+            });
+        } catch (e) {
+            console.error(e);
+            galleryGrid.innerHTML = '<p class="gallery-empty">图库加载失败</p>';
+        }
     }
 
     // ==================== 粒子效果 ====================
@@ -198,6 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentImageURL = data.image_url;
                 addToHistory(data.image_url, finalPrompt);
                 showSuccess('图片生成成功！');
+                loadGallery();
             } else if (data.task_id) {
                 // 开始轮询
                 await pollForResult(data.task_id, finalPrompt);
@@ -235,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     addToHistory(data.image_url, prompt);
                     showSuccess('图片生成成功！');
                     loader.classList.add('hidden');
+                    loadGallery();
                     return;
                 } else if (data.status === 'failed') {
                     throw new Error(data.error || '图片生成失败');

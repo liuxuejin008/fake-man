@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 import threading
 from flask import Flask, render_template, request, jsonify, send_from_directory
@@ -7,6 +8,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+API_DIR = os.path.dirname(os.path.abspath(__file__))
+if API_DIR not in sys.path:
+    sys.path.insert(0, API_DIR)
+
+from db import save_generation, list_gallery  # noqa: E402
+
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 STATIC_DIR = os.path.join(BASE_DIR, 'static')
 
@@ -76,6 +83,14 @@ def serve_static(filename):
 @app.route('/')
 def home():
     return render_template('index.html')
+
+
+@app.route('/api/gallery', methods=['GET'])
+def gallery():
+    """Recent images saved from successful generations (callback or sync)."""
+    limit = request.args.get('limit', default=24, type=int)
+    items = list_gallery(limit)
+    return jsonify({"items": items})
 
 
 def resolve_callback_url():
@@ -194,8 +209,15 @@ def generate():
                     task_store[task_id] = {
                         "status": "completed",
                         "image_url": image_url,
-                        "prompt": prompt
+                        "prompt": prompt,
+                        "style": gen_style,
                     }
+            save_generation(
+                image_url,
+                prompt,
+                gen_style,
+                str(task_id) if task_id else None,
+            )
             return jsonify({
                 "task_id": task_id,
                 "status": "completed",
@@ -208,6 +230,7 @@ def generate():
                 task_store[task_id] = {
                     "status": "processing",
                     "prompt": prompt,
+                    "style": gen_style,
                     "enhanced_prompt": enhanced_prompt,
                     "callback_url": callback_url,
                     "trace_id": resp_json.get("trace_id")
@@ -262,10 +285,23 @@ def banana_callback():
     if payload.get("error"):
         callback_result["error"] = payload["error"].get("message", "Callback returned error")
 
+    to_save = None
     with task_lock:
         existing = task_store.get(task_id, {})
         merged = {**existing, **callback_result}
+        if existing.get("prompt"):
+            merged["prompt"] = existing["prompt"]
         task_store[task_id] = merged
+        if merged.get("status") == "completed" and merged.get("image_url"):
+            to_save = (
+                merged["image_url"],
+                merged.get("prompt") or "",
+                merged.get("style") or "",
+                str(task_id),
+            )
+
+    if to_save:
+        save_generation(to_save[0], to_save[1], to_save[2], to_save[3])
 
     return jsonify({"ok": True, "task_id": task_id})
 
