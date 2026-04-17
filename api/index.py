@@ -33,6 +33,14 @@ OPENROUTER_TIMEOUT = int(os.environ.get("OPENROUTER_TIMEOUT", "90"))
 # 推理模型会把大量 token 用在 reasoning 上，过小会导致 content 为空且 finish_reason=length
 OPENROUTER_INSPIRE_MAX_TOKENS = int(os.environ.get("OPENROUTER_INSPIRE_MAX_TOKENS", "2048"))
 
+# 启动时打印环境变量（生产调试用）
+print("[ENV] BANANA_API_KEY:", "set" if BANANA_API_KEY else "MISSING")
+print("[ENV] BANANA_API_URL:", BANANA_API_URL)
+print("[ENV] BANANA_CALLBACK_URL:", BANANA_CALLBACK_URL or "(auto)")
+print("[ENV] OPENROUTER_API_KEY:", "set" if OPENROUTER_API_KEY else "MISSING")
+print("[ENV] OPENROUTER_MODEL:", OPENROUTER_MODEL)
+print("[ENV] DATABASE_URL:", "set" if os.environ.get("DATABASE_URL") else "MISSING")
+
 STYLE_GUIDANCE = {
     "alternate": (
         "「伪人」Alternates：源自《曼德拉记录》一类模仿人类的存在，恐怖谷——远看像普通人，近看眼神空洞或对焦不对、微笑略宽、"
@@ -279,12 +287,14 @@ def generate():
                         "prompt": prompt,
                         "style": gen_style,
                     }
-            save_generation(
+            saved = save_generation(
                 image_url,
                 prompt,
                 gen_style,
                 str(task_id) if task_id else None,
             )
+            if not saved:
+                print(f"[WARN] Failed to save generation to DB: task_id={task_id}, image_url={image_url}")
             return jsonify({
                 "task_id": task_id,
                 "status": "completed",
@@ -368,7 +378,9 @@ def banana_callback():
             )
 
     if to_save:
-        save_generation(to_save[0], to_save[1], to_save[2], to_save[3])
+        saved = save_generation(to_save[0], to_save[1], to_save[2], str(to_save[3]))
+        if not saved:
+            print(f"[WARN] Failed to save generation to DB via callback: task_id={to_save[3]}")
 
     return jsonify({"ok": True, "task_id": task_id})
 
